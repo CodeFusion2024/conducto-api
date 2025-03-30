@@ -1,4 +1,4 @@
-import { User } from "../models/User.js";
+import { User } from "../models/user.js";
 import { sendOTP } from "../utils/emailService.js";
 import otpGenerator from "otp-generator";
 import bcrypt from "bcrypt";
@@ -70,7 +70,7 @@ export const verifyOTP = async (req, res) => {
     // Ensure email is permanently stored (already handled during OTP request)
     await user.save();
 
-    return res.json({ message: "OTP verified successfully", email: user.email });
+    return res.json({ message: "OTP verified successfully", email: user.email , UserId : user._id});
   } catch (error) {
     console.error("❌ OTP Verification Error:", error);
     return res.status(500).json({ message: "Error verifying OTP" });
