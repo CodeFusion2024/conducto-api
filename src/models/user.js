@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+<<<<<<< HEAD
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, trim: true },
   otp: { type: String },
@@ -8,6 +9,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [50, 'Name cannot be more than 50 characters']
+=======
+const UserSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, unique: true, trim: true },
+    otp: { type: String },
+    otpExpiresAt: { type: Date },
+    //chnages
+>>>>>>> 588ada7d686b77000c06e55fef18648ce974268e
   },
   phone: {
     type: String,
