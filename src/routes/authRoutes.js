@@ -4,7 +4,6 @@ import {
   verifyOTP, 
   storeProfileData, 
   getProfileData,
-  upload 
 } from '../controllers/authController.js';
 
 const router = express.Router();
@@ -14,7 +13,10 @@ router.post('/request-otp', requestOTP);
 router.post('/verify-otp', verifyOTP);
 
 // Profile Routes
-router.put('/profile/:userId', upload, storeProfileData);
+
+router.put('/profile/:userId', storeProfileData);
 router.get('/profile/:userId', getProfileData);
 
 export default router;
+
+

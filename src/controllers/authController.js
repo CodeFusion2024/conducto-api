@@ -187,87 +187,29 @@ export const verifyOTP = async (req, res) => {
 ///////////////////////////////////upload  data parts 
 
 
-// Cloudinary Configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// Manually define __dirname in ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Now use __dirname to set `uploads/` directory
-const uploadDir = path.join(__dirname, '../uploads');
-
-console.log("Upload Directory:", uploadDir); // Debugging
 
 
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir); // Save to `uploads/` inside project
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-export const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, 
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only images are allowed (jpeg, jpg, png, gif)'));
-    }
-  }
-}).single('image');
 
 // Store/Update Profile Data
+// Store/Update Profile Data (Raw JSON)
 export const storeProfileData = async (req, res) => {
   const { userId } = req.params;
-  const { name, phone, city, latitude, longitude } = req.body;
+  const { name, phone, city, latitude, longitude, imageUrl } = req.body;
 
   if (!userId) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "User ID is required" 
+      message: "User ID is required"
     });
   }
 
   try {
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "User not found" 
+        message: "User not found"
       });
-    }
-
-    let imageUrl = user.image;
-    if (req.file) {
-      // Upload new image to Cloudinary
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'user-profiles',
-        width: 500,
-        height: 500,
-        crop: 'fill'
-      });
-      imageUrl = result.secure_url;
-
-      // Delete old image if exists
-      if (user.image) {
-        const publicId = user.image.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(`user-profiles/${publicId}`);
-      }
     }
 
     // Update user data
@@ -279,17 +221,15 @@ export const storeProfileData = async (req, res) => {
         [parseFloat(longitude), parseFloat(latitude)] : 
         user.location?.coordinates
     };
-    user.image = imageUrl;
+
+    // Update image URL if provided
+    if (imageUrl) {
+      user.image = imageUrl;
+    }
 
     await user.save();
 
-    // Clean up uploaded file
-    if (req.file) {
-      const fs = await import('fs');
-      fs.unlinkSync(req.file.path);
-    }
-
-    return res.json({ 
+    return res.json({
       success: true,
       message: "Profile updated successfully",
       data: {
@@ -303,12 +243,13 @@ export const storeProfileData = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Profile Update Error:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
-      message: "Error updating profile" 
+      message: "Error updating profile"
     });
   }
 };
+
 
 // Get Profile Data
 export const getProfileData = async (req, res) => {
