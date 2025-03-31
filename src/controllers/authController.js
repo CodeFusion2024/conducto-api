@@ -182,7 +182,6 @@ export const verifyOTP = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
 
 
 ///////////////////////////////////upload  data parts 
@@ -352,5 +351,3 @@ export const getProfileData = async (req, res) => {
     });
   }
 };
-=======
->>>>>>> 588ada7d686b77000c06e55fef18648ce974268e
