@@ -3,13 +3,15 @@ import {
   createCategory, 
   getCategoriesByStore, 
   updateCategory, 
-  deleteCategory 
+  deleteCategory,
+  getAllCategories,
 } from "../controllers/categoryController.js";
 
 const router = express.Router();
 
 // Create Category Under a Store
 router.post("/create", createCategory);
+router.post("/", getAllCategories);
 
 // Get All Categories Under a Store
 router.get("/:storeId/all", getCategoriesByStore);

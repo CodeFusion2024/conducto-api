@@ -32,6 +32,15 @@ export const createCategory = async (req, res) => {
   }
 };
 
+// ➤ Get All Categories Across All Stores
+export const getAllCategories = async (req, res) => {
+  try {
+    const categories = await Category.find().populate("store", "name"); // Populating store name
+    res.status(200).json(categories);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 
 // ➤ Get All Categories Under a Store
