@@ -60,6 +60,18 @@ export const addReview = async (req, res) => {
   }
 };
 
+export const getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.find()
+      .populate("category", "name") // Populating category name
+      .populate("store", "name"); // Populating store name
+
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ➤ Get Product with Reviews
 export const getProductWithReviews = async (req, res) => {
   try {
