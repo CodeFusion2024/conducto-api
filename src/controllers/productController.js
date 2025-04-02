@@ -60,17 +60,7 @@ export const addReview = async (req, res) => {
   }
 };
 
-export const getAllProducts = async (req, res) => {
-  try {
-    const products = await Product.find()
-      .populate("category", "name") // Populating category name
-      .populate("store", "name"); // Populating store name
 
-    res.status(200).json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
 
 // ➤ Get Product with Reviews
 export const getProductWithReviews = async (req, res) => {
@@ -92,6 +82,25 @@ export const getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
     const products = await Product.find({ category: categoryId });
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ➤ Get All Products
+export const getAllProducts = async (req, res) => {
+  try {
+    // Retrieve all products and populate related fields
+    const products = await Product.find()
+      .populate("category", "name") // Populate category name
+      .populate("store", "name") // Populate store name
+      .populate("reviews.user", "name email"); // Populate user details for reviews
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: "No products found" });
+    }
+
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });

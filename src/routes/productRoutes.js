@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 router.post("/create", createProduct);
-router.post("/", getAllProducts);
+router.get("/", getAllProducts);
 router.get("/:categoryId", getProductsByCategory);
 router.post("/:productId/reviews", addReview);
 router.get("/:productId/reviews/all", getProductWithReviews);
