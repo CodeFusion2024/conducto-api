@@ -2,12 +2,9 @@ import { User } from "../models/user.js";
 import { sendOTP } from "../utils/emailService.js";
 import otpGenerator from "otp-generator";
 import bcrypt from "bcrypt";
-import cloudinary from 'cloudinary';
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-
+import { v2 as cloudinary } from "cloudinary";
+import streamifier from "streamifier";
+import dotenv from "dotenv";
 
 
 
@@ -173,13 +170,16 @@ export const verifyOTP = async (req, res) => {
     user.otpExpiresAt = null;
 
     // Ensure email is permanently stored (already handled during OTP request)
+    
     await user.save();
-
+    
     return res.json({ message: "OTP verified successfully", email: user.email , UserId : user._id});
   } catch (error) {
     console.error("❌ OTP Verification Error:", error);
     return res.status(500).json({ message: "Error verifying OTP" });
   }
+
+  
 };
 
 
@@ -192,40 +192,64 @@ export const verifyOTP = async (req, res) => {
 
 // Store/Update Profile Data
 // Store/Update Profile Data (Raw JSON)
+
+
+
+
+dotenv.config();
+
+// Configure Cloudinary using .env
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Upload image to cloudinary using stream
+const uploadToCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "user_profiles" },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(fileBuffer).pipe(stream);
+  });
+};
+
+// 📌 PUT /api/auth/profile/:userId
 export const storeProfileData = async (req, res) => {
   const { userId } = req.params;
-  const { name, phone, city, latitude, longitude, imageUrl } = req.body;
+  const { name, phone, city, latitude, longitude } = req.body;
 
   if (!userId) {
-    return res.status(400).json({
-      success: false,
-      message: "User ID is required"
-    });
+    return res.status(400).json({ success: false, message: "User ID is required" });
   }
 
   try {
     const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    let imageUrl = user.image;
+
+    // If image file is uploaded
+    if (req.file && req.file.buffer) {
+      const uploaded = await uploadToCloudinary(req.file.buffer);
+      imageUrl = uploaded.secure_url;
     }
 
-    // Update user data
     user.name = name || user.name;
     user.phone = phone || user.phone;
     user.location = {
       city: city || user.location?.city,
-      coordinates: (latitude && longitude) ? 
-        [parseFloat(longitude), parseFloat(latitude)] : 
-        user.location?.coordinates
+      coordinates:
+        latitude && longitude
+          ? [parseFloat(longitude), parseFloat(latitude)]
+          : user.location?.coordinates,
     };
-
-    // Update image URL if provided
-    if (imageUrl) {
-      user.image = imageUrl;
-    }
+    user.image = imageUrl;
 
     await user.save();
 
@@ -238,42 +262,31 @@ export const storeProfileData = async (req, res) => {
         phone: user.phone,
         city: user.location?.city,
         coordinates: user.location?.coordinates,
-        image: user.image
-      }
+        image: user.image,
+      },
     });
   } catch (error) {
     console.error("❌ Profile Update Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error updating profile"
-    });
+    return res.status(500).json({ success: false, message: "Error updating profile" });
   }
 };
 
-
-// Get Profile Data
+// 📌 GET /api/auth/profile/:userId
 export const getProfileData = async (req, res) => {
   const { userId } = req.params;
 
   if (!userId) {
-    return res.status(400).json({ 
-      success: false,
-      message: "User ID is required" 
-    });
+    return res.status(400).json({ success: false, message: "User ID is required" });
   }
 
   try {
-    const user = await User.findById(userId)
-      .select('-otp -otpExpiresAt -__v -createdAt -updatedAt');
+    const user = await User.findById(userId).select("-otp -otpExpiresAt -__v");
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false,
-        message: "User not found" 
-      });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    return res.json({ 
+    return res.json({
       success: true,
       data: {
         name: user.name,
@@ -281,14 +294,11 @@ export const getProfileData = async (req, res) => {
         phone: user.phone,
         city: user.location?.city,
         coordinates: user.location?.coordinates,
-        image: user.image
-      }
+        image: user.image,
+      },
     });
   } catch (error) {
     console.error("❌ Get Profile Error:", error);
-    return res.status(500).json({ 
-      success: false,
-      message: "Error fetching profile" 
-    });
+    return res.status(500).json({ success: false, message: "Error fetching profile" });
   }
 };
