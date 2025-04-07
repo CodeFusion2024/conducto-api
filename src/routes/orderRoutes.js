@@ -13,7 +13,7 @@ import {
 
 const router = express.Router();
 
-router.get("/user/:userId", getUserOrders);
+router.get("/:userId", getUserOrders);
 router.put("/:orderId/status", updateOrderStatus);
 router.post("/buy-now", buyNow);
 router.post("/from-cart", orderFromCart);
