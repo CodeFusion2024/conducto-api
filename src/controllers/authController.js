@@ -196,60 +196,41 @@ export const verifyOTP = async (req, res) => {
 
 
 
-dotenv.config();
-
-// Configure Cloudinary using .env
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// Upload image to cloudinary using stream
-const uploadToCloudinary = (fileBuffer) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: "user_profiles" },
-      (error, result) => {
-        if (result) resolve(result);
-        else reject(error);
-      }
-    );
-    streamifier.createReadStream(fileBuffer).pipe(stream);
-  });
-};
-
-// 📌 PUT /api/auth/profile/:userId
+// Store/Update Profile Data (Raw JSON)
 export const storeProfileData = async (req, res) => {
   const { userId } = req.params;
-  const { name, phone, city, latitude, longitude } = req.body;
+  const { name, phone, city, latitude, longitude, imageUrl } = req.body;
 
   if (!userId) {
-    return res.status(400).json({ success: false, message: "User ID is required" });
+    return res.status(400).json({
+      success: false,
+      message: "User ID is required"
+    });
   }
 
   try {
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    let imageUrl = user.image;
-
-    // If image file is uploaded
-    if (req.file && req.file.buffer) {
-      const uploaded = await uploadToCloudinary(req.file.buffer);
-      imageUrl = uploaded.secure_url;
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
     }
 
+    // Update user data
     user.name = name || user.name;
     user.phone = phone || user.phone;
     user.location = {
       city: city || user.location?.city,
-      coordinates:
-        latitude && longitude
-          ? [parseFloat(longitude), parseFloat(latitude)]
-          : user.location?.coordinates,
+      coordinates: (latitude && longitude) ? 
+        [parseFloat(longitude), parseFloat(latitude)] : 
+        user.location?.coordinates
     };
-    user.image = imageUrl;
+
+    // Update image URL if provided
+    if (imageUrl) {
+      user.image = imageUrl;
+    }
 
     await user.save();
 
@@ -262,12 +243,15 @@ export const storeProfileData = async (req, res) => {
         phone: user.phone,
         city: user.location?.city,
         coordinates: user.location?.coordinates,
-        image: user.image,
-      },
+        image: user.image
+      }
     });
   } catch (error) {
     console.error("❌ Profile Update Error:", error);
-    return res.status(500).json({ success: false, message: "Error updating profile" });
+    return res.status(500).json({
+      success: false,
+      message: "Error updating profile"
+    });
   }
 };
 
